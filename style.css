@@ -98,3 +98,68 @@ canvas {
     50% { opacity: 0.5; text-shadow: 0 0 10px var(--neon-yellow); }
     100% { opacity: 1; }
 }
+/* Add to existing style.css */
+.game-container {
+    position: relative; /* Crucial for absolute overlays */
+}
+
+.overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 600px; /* Matches canvas width */
+    height: 600px;
+    background: rgba(13, 17, 23, 0.95);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.overlay.active {
+    display: flex;
+}
+
+.overlay h2 {
+    color: var(--neon-blue);
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+    text-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+}
+
+.blink {
+    animation: blinker 1s linear infinite;
+    color: var(--neon-yellow);
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
+}
+
+ul#menuList {
+    list-style: none;
+    padding: 0;
+    font-size: 1.5rem;
+}
+
+ul#menuList li {
+    margin: 15px 0;
+    color: #8b949e;
+    transition: all 0.2s;
+}
+
+ul#menuList li.selected {
+    color: var(--neon-yellow);
+    text-shadow: 0 0 10px var(--neon-yellow);
+    transform: scale(1.1);
+}
+
+ul#menuList li.selected::before {
+    content: "> ";
+}
+
+ul#menuList li.disabled {
+    opacity: 0.3;
+}

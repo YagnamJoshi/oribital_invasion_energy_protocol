@@ -13,6 +13,28 @@
         </div>
         
         <div class="game-container">
+            <div id="startScreen" class="overlay active">
+                <h2>PRESS ANY KEY TO INITIALIZE</h2>
+                <p class="blink">Waiting for input...</p>
+            </div>
+
+            <div id="mainMenu" class="overlay">
+                <h2>MAIN MENU</h2>
+                <ul id="menuList">
+                    <li class="selected" data-action="casual">Casual Mode</li>
+                    <li class="disabled">Level Based (Locked)</li>
+                    <li class="disabled">Multiplayer (Locked)</li>
+                    <li data-action="toggleMusic">Music: ON</li>
+                </ul>
+                <p class="instructions">Use ARROWS to select, ENTER to confirm.</p>
+            </div>
+
+            <div id="gameOverScreen" class="overlay">
+                <h2 id="gameOverTitle">SYSTEM FAILURE</h2>
+                <p>FINAL SCORE: <span id="finalScore">0</span></p>
+                <p class="blink">Press ENTER to return to Menu</p>
+            </div>
+
             <canvas id="gameCanvas" width="600" height="600"></canvas>
             
             <div class="ui-panel">
@@ -21,17 +43,12 @@
                     <p id="scoreDisplay">0</p>
                 </div>
                 <div class="stat-box">
-                    <h3>HIGH SCORE</h3>
-                    <p id="highScoreDisplay">0</p>
+                    <h3>LIVES</h3>
+                    <p id="livesDisplay">3</p>
                 </div>
                 <div class="stat-box status">
                     <h3>SYSTEM STATUS</h3>
                     <p id="statusDisplay" class="normal">NOMINAL</p>
-                </div>
-                <div class="instructions">
-                    <p><strong>ARROWS / WASD:</strong> Move Ship</p>
-                    <p><strong>GOAL:</strong> Collect all Energy Orbs.</p>
-                    <p><strong>BIG BATTERIES:</strong> Overcharge weapons to defeat Alien Ships.</p>
                 </div>
             </div>
         </div>
