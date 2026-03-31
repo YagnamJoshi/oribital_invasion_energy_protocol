@@ -3,56 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbital Invasion: Energy Protocol</title>
+    <title>Orbital Invasion - Menu</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="menu-body">
     <div class="game-wrapper">
         <div class="header">
             <h1>ORBITAL INVASION: <span>ENERGY PROTOCOL</span></h1>
         </div>
         
-        <div class="game-container">
+        <div class="menu-container">
             <div id="startScreen" class="overlay active">
-                <h2>PRESS ANY KEY TO INITIALIZE</h2>
-                <p class="blink">Waiting for input...</p>
+                <h2>SYSTEM STANDBY</h2>
+                <p class="blink">Press ANY KEY to Initialize Audio & Menu</p>
             </div>
 
             <div id="mainMenu" class="overlay">
                 <h2>MAIN MENU</h2>
                 <ul id="menuList">
-                    <li class="selected" data-action="casual">Casual Mode</li>
+                    <li class="selected"><a href="casual.html">Casual Mode</a></li>
                     <li class="disabled">Level Based (Locked)</li>
                     <li class="disabled">Multiplayer (Locked)</li>
-                    <li data-action="toggleMusic">Music: ON</li>
                 </ul>
                 <p class="instructions">Use ARROWS to select, ENTER to confirm.</p>
             </div>
-
-            <div id="gameOverScreen" class="overlay">
-                <h2 id="gameOverTitle">SYSTEM FAILURE</h2>
-                <p>FINAL SCORE: <span id="finalScore">0</span></p>
-                <p class="blink">Press ENTER to return to Menu</p>
-            </div>
-
-            <canvas id="gameCanvas" width="600" height="600"></canvas>
-            
-            <div class="ui-panel">
-                <div class="stat-box">
-                    <h3>SCORE</h3>
-                    <p id="scoreDisplay">0</p>
-                </div>
-                <div class="stat-box">
-                    <h3>LIVES</h3>
-                    <p id="livesDisplay">3</p>
-                </div>
-                <div class="stat-box status">
-                    <h3>SYSTEM STATUS</h3>
-                    <p id="statusDisplay" class="normal">NOMINAL</p>
-                </div>
-            </div>
         </div>
     </div>
-    <script src="game.js"></script>
+
+    <script>
+        let state = 'START';
+        const startScreen = document.getElementById('startScreen');
+        const mainMenu = document.getElementById('mainMenu');
+        const menuItems = document.querySelectorAll('#menuList li:not(.disabled) a');
+        let menuIndex = 0;
+
+        // Load your menu music from the assets folder
+        const menuMusic = new Audio('assets/menu_music.mp3'); 
+        menuMusic.loop = true;
+
+        document.addEventListener('keydown', (e) => {
+            if (state === 'START') {
+                state = 'MENU';
+                startScreen.classList.remove('active');
+                mainMenu.classList.add('active');
+                
+                // Audio is now allowed to play because the user interacted!
+                menuMusic.play().catch(err => console.log("Audio still blocked:", err));
+                return;
+            }
+
+            if (state === 'MENU') {
+                if (e.key === 'ArrowUp' || e.key === 'w') {
+                    menuIndex = (menuIndex > 0) ? menuIndex - 1 : menuItems.length - 1;
+                    updateSelection();
+                } else if (e.key === 'ArrowDown' || e.key === 's') {
+                    menuIndex = (menuIndex < menuItems.length - 1) ? menuIndex + 1 : 0;
+                    updateSelection();
+                } else if (e.key === 'Enter') {
+                    // Stop music before leaving page
+                    menuMusic.pause(); 
+                    window.location.href = menuItems[menuIndex].href;
+                }
+            }
+        });
+
+        function updateSelection() {
+            document.querySelectorAll('#menuList li').forEach(li => li.classList.remove('selected'));
+            menuItems[menuIndex].parentElement.classList.add('selected');
+        }
+    </script>
 </body>
 </html>

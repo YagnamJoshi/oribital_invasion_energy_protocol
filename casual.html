@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casual Mode - Orbital Invasion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-container">
+            
+            <div id="readyScreen" class="overlay active">
+                <h2>CASUAL MODE</h2>
+                <p class="blink">Press ANY KEY to Start Game & Music</p>
+                <div id="deathScreen" class="overlay">
+                <h2>SHIP DESTROYED</h2>
+                <p class="blink">Press ANY KEY to Deploy Backup</p>
+            </div>
+            </div>
+
+            <div id="gameOverScreen" class="overlay">
+                <h2 id="gameOverTitle">SYSTEM FAILURE</h2>
+                <p>FINAL SCORE: <span id="finalScore">0</span></p>
+                <p class="blink">Press ENTER to restart, ESC for Menu</p>
+            </div>
+
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            
+            <div class="ui-panel">
+                <div class="stat-box">
+                    <h3>SCORE</h3>
+                    <p id="scoreDisplay">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>HIGH SCORE</h3>
+                    <p id="highScoreDisplay">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>LIVES</h3>
+                    <p id="livesDisplay">3</p>
+                </div>
+                <div class="stat-box status">
+                    <h3>SYSTEM STATUS</h3>
+                    <p id="statusDisplay" class="normal">NOMINAL</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

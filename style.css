@@ -163,3 +163,43 @@ ul#menuList li.selected::before {
 ul#menuList li.disabled {
     opacity: 0.3;
 }
+
+/* Update these sections in your existing style.css */
+
+.menu-body {
+    background-image: radial-gradient(circle at center, #161b22 0%, #0d1117 100%);
+}
+
+.menu-container {
+    width: 600px;
+    height: 400px;
+    position: relative;
+    background: var(--panel-bg);
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+    overflow: hidden;
+}
+
+ul#menuList li a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-block;
+    width: 100%;
+}
+
+.overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(13, 17, 23, 0.95);
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    text-align: center;
+}
+/* Ensure active overlays show up */
+.overlay.active {
+    display: flex; 
+}
