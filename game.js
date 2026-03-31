@@ -6,7 +6,6 @@ window.onload = () => {
     const ROWS = 20;
     const COLS = 20;
 
-    // --- SPRITE ASSET LOADING ---
     const sprites = {
         player: [new Image(), new Image()],
         alienAStar: [new Image(), new Image()],
@@ -23,11 +22,9 @@ window.onload = () => {
     sprites.alienUCS[0].src = 'assets/enemy_orange_1.png';
     sprites.alienUCS[1].src = 'assets/enemy_orange_2.png';
 
-    // --- AUDIO SYSTEM ---
     const bgmGame = new Audio('assets/casual_music.mp3');
     bgmGame.loop = true;
 
-    // --- LEVEL DATA ---
     const initialMap = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
@@ -37,11 +34,11 @@ window.onload = () => {
         [1,2,1,1,2,1,2,1,1,1,1,1,1,2,1,2,1,1,2,1],
         [1,2,2,2,2,1,2,2,2,1,1,2,2,2,1,2,2,2,2,1],
         [1,1,1,1,2,1,1,1,0,1,1,0,1,1,1,2,1,1,1,1],
-        [0,0,0,1,2,1,0,0,0,0,0,0,0,0,1,2,1,0,0,0], // TUNNEL ROW
+        [0,0,0,1,2,1,0,0,0,0,0,0,0,0,1,2,1,0,0,0], 
         [1,1,1,1,2,1,0,1,1,0,0,1,1,0,1,2,1,1,1,1],
         [2,2,2,2,2,0,0,1,0,0,0,0,1,0,0,2,2,2,2,2],
         [1,1,1,1,2,1,0,1,1,1,1,1,1,0,1,2,1,1,1,1],
-        [0,0,0,1,2,1,0,0,0,0,0,0,0,0,1,2,1,0,0,0], // TUNNEL ROW
+        [0,0,0,1,2,1,0,0,0,0,0,0,0,0,1,2,1,0,0,0], 
         [1,1,1,1,2,1,2,1,1,1,1,1,1,2,1,2,1,1,1,1],
         [1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
         [1,3,1,1,2,1,1,1,2,1,1,2,1,1,1,2,1,1,3,1],
@@ -53,25 +50,27 @@ window.onload = () => {
     let levelMap = [];
 
     function getTile(x, y) {
-        // Tunnel Logic Validation
         if ((y === 8 || y === 12) && (x < 0 || x >= COLS)) return 0;
         if (y < 0 || y >= ROWS || x < 0 || x >= COLS) return 1;
         return levelMap[y][x];
     }
 
-    // --- GAME STATE VARIABLES ---
     let score = 0;
-    let highScore = localStorage.getItem('orbitalHighScore') || 0; 
+    // FIXED: Parse as Integer to prevent string math bugs
+    let highScore = parseInt(localStorage.getItem('orbitalHighScore')) || 0; 
     let lives = 3;
     let overchargeTime = 0;
     let animationFrameCount = 0;
+    let remainingOrbs = 0;
     
-    // State Flags
+    let baseAlienSpeed = 220; 
+    let playerSpeed = 160;
+
     let gameStarted = false; 
     let isGameOver = false;
     let isDeadPaused = false; 
+    let isWinPaused = false;
 
-    // Decoupled Speed Timers
     let lastPlayerTick = 0;
     let lastAlienTick = 0;
 
@@ -84,10 +83,15 @@ window.onload = () => {
         for (let dir of directions) {
             let nx = startX + dir.dx; let ny = startY + dir.dy;
             if (getTile(nx, ny) !== 1) {
-                let cost = 0;
-                // Tunnel math fix for pathfinding so they don't get confused by edge wraps
                 let wrappedNx = (nx + COLS) % COLS;
-                let heuristic = Math.abs(targetX - wrappedNx) + Math.abs(targetY - ny); 
+                
+                // FIXED: Torus Manhattan Distance for Tunnel Logic
+                let distX = Math.abs(targetX - wrappedNx);
+                distX = Math.min(distX, COLS - distX); // Math magic that makes tunnels work
+                let distY = Math.abs(targetY - ny);
+                
+                let heuristic = distX + distY; 
+                let cost = 0;
                 
                 if (algoType === 'A*') cost = 1 + heuristic; 
                 else if (algoType === 'BFS') cost = heuristic; 
@@ -99,15 +103,14 @@ window.onload = () => {
         return bestMove || {dx: 0, dy: 0};
     }
 
-    // --- ENTITIES ---
     class Player {
         constructor() { this.resetPosition(); }
         
         resetPosition() {
             this.x = 9; this.y = 16;
-            this.dirX = 0; this.dirY = -1; // Default moving UP
+            this.dirX = 0; this.dirY = -1; 
             this.nextDirX = 0; this.nextDirY = 0;
-            this.angle = 0; // 0 radians = UP for player
+            this.angle = 0; 
         }
 
         update() {
@@ -115,16 +118,14 @@ window.onload = () => {
                 this.dirX = this.nextDirX; this.dirY = this.nextDirY;
             }
 
-            // Calculate rotation angle based on UP being the default image
-            if (this.dirX === 1) this.angle = Math.PI / 2;       // Right
-            if (this.dirX === -1) this.angle = -Math.PI / 2;     // Left
-            if (this.dirY === 1) this.angle = Math.PI;           // Down
-            if (this.dirY === -1) this.angle = 0;                // Up
+            if (this.dirX === 1) this.angle = Math.PI / 2;       
+            if (this.dirX === -1) this.angle = -Math.PI / 2;     
+            if (this.dirY === 1) this.angle = Math.PI;           
+            if (this.dirY === -1) this.angle = 0;                
 
             if (getTile(this.x + this.dirX, this.y + this.dirY) !== 1) {
                 this.x += this.dirX; this.y += this.dirY;
                 
-                // Perfect Tunnel Wrap Logic
                 if (this.x < 0) this.x = COLS - 1;
                 if (this.x >= COLS) this.x = 0;
             }
@@ -132,33 +133,43 @@ window.onload = () => {
             if (levelMap[this.y][this.x] === 2) {
                 levelMap[this.y][this.x] = 0;
                 score += 10;
+                remainingOrbs--;
+                checkWin();
             } else if (levelMap[this.y][this.x] === 3) {
                 levelMap[this.y][this.x] = 0;
                 score += 50;
-                overchargeTime = 50; // Increased duration slightly
+                remainingOrbs--;
+                overchargeTime = 50; 
                 document.getElementById('statusDisplay').innerText = "OVERCHARGE ACTIVE";
                 document.getElementById('statusDisplay').className = "overcharge";
+                checkWin();
+            }
+
+            // FIXED: Live High Score Updating
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('orbitalHighScore', highScore);
+                document.getElementById('highScoreDisplay').innerText = highScore;
             }
         }
 
         draw() {
-            let px = this.x * TILE_SIZE + (TILE_SIZE / 2); // Center X
-            let py = this.y * TILE_SIZE + (TILE_SIZE / 2); // Center Y
+            let px = this.x * TILE_SIZE + (TILE_SIZE / 2); 
+            let py = this.y * TILE_SIZE + (TILE_SIZE / 2); 
             let frameIndex = (animationFrameCount % 10 < 5) ? 0 : 1;
             let currentSprite = sprites.player[frameIndex];
 
             ctx.save();
-            ctx.translate(px, py); // Move canvas origin to center of player
-            ctx.rotate(this.angle); // Rotate canvas
+            ctx.translate(px, py); 
+            ctx.rotate(this.angle); 
 
             if (currentSprite.complete && currentSprite.naturalHeight !== 0) {
-                // Draw image offset by half size so it centers on the translated point
                 ctx.drawImage(currentSprite, -TILE_SIZE/2, -TILE_SIZE/2, TILE_SIZE, TILE_SIZE);
             } else {
                 ctx.fillStyle = '#00f0ff';
-                ctx.fillRect(-10, -10, 20, 20); // Fallback box
+                ctx.fillRect(-10, -10, 20, 20); 
             }
-            ctx.restore(); // Reset canvas rotation/translation for the next object
+            ctx.restore(); 
         }
     }
 
@@ -174,7 +185,7 @@ window.onload = () => {
             this.x = this.startX; 
             this.y = this.startY;
             this.respawnDelay = 0;
-            this.angle = 0; // 0 radians = DOWN for enemy based on your image
+            this.angle = 0; 
         }
 
         update(playerX, playerY) {
@@ -184,28 +195,30 @@ window.onload = () => {
             }
 
             let targetX = playerX; let targetY = playerY;
-            
             if (overchargeTime > 0) {
                 targetX = COLS - playerX; targetY = ROWS - playerY;
             }
 
             let move = getNextMove(this.x, this.y, targetX, targetY, this.algorithm);
             
-            // Calculate rotation angle based on DOWN being the default image
-            if (move.dx === 1) this.angle = -Math.PI / 2;      // Right
-            if (move.dx === -1) this.angle = Math.PI / 2;      // Left
-            if (move.dy === -1) this.angle = Math.PI;          // Up
-            if (move.dy === 1) this.angle = 0;                 // Down (Default)
+            if (move.dx === 1) this.angle = -Math.PI / 2;      
+            if (move.dx === -1) this.angle = Math.PI / 2;      
+            if (move.dy === -1) this.angle = Math.PI;          
+            if (move.dy === 1) this.angle = 0;                 
 
             this.x += move.dx; this.y += move.dy;
             
-            // Tunnel wrap for aliens
             if (this.x < 0) this.x = COLS - 1;
             if (this.x >= COLS) this.x = 0;
 
             if (this.x === player.x && this.y === player.y) {
                 if (overchargeTime > 0) {
                     score += 200;
+                    if (score > highScore) {
+                        highScore = score;
+                        localStorage.setItem('orbitalHighScore', highScore);
+                        document.getElementById('highScoreDisplay').innerText = highScore;
+                    }
                     this.resetPosition();
                     this.respawnDelay = 15; 
                 } else {
@@ -240,15 +253,28 @@ window.onload = () => {
     let player;
     let aliens = [];
 
-    function initGame() {
+    function setupMapAndOrbs() {
         levelMap = JSON.parse(JSON.stringify(initialMap)); 
+        remainingOrbs = 0;
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (levelMap[r][c] === 2 || levelMap[r][c] === 3) remainingOrbs++;
+            }
+        }
+    }
+
+    function initGame() {
+        setupMapAndOrbs();
         score = 0;
         lives = 3;
+        baseAlienSpeed = 220; 
         overchargeTime = 0;
         isGameOver = false;
         isDeadPaused = false;
+        isWinPaused = false;
         document.getElementById('gameOverScreen').classList.remove('active');
         document.getElementById('deathScreen').classList.remove('active');
+        document.getElementById('winScreen').classList.remove('active');
         
         player = new Player();
         aliens = [
@@ -265,18 +291,20 @@ window.onload = () => {
         updateUI();
         if (lives <= 0) {
             isGameOver = true;
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('orbitalHighScore', highScore);
-            }
             document.getElementById('finalScore').innerText = score;
-            document.getElementById('highScoreDisplay').innerText = highScore;
             document.getElementById('gameOverScreen').classList.add('active');
             bgmGame.pause();
         } else {
-            // TRIGGER DEATH PAUSE
             isDeadPaused = true;
             document.getElementById('deathScreen').classList.add('active');
+        }
+    }
+
+    function checkWin() {
+        if (remainingOrbs <= 0) {
+            isWinPaused = true;
+            document.getElementById('winScreen').classList.add('active');
+            baseAlienSpeed = Math.max(80, baseAlienSpeed - 30); 
         }
     }
 
@@ -304,13 +332,25 @@ window.onload = () => {
             return;
         }
 
-        // UNPAUSE AFTER DEATH
         if (isDeadPaused) {
             isDeadPaused = false;
             document.getElementById('deathScreen').classList.remove('active');
             player.resetPosition();
             aliens.forEach(a => a.resetPosition());
-            // Reset timers so they don't jump instantly
+            lastPlayerTick = performance.now();
+            lastAlienTick = performance.now();
+            return;
+        }
+
+        if (isWinPaused) {
+            isWinPaused = false;
+            document.getElementById('winScreen').classList.remove('active');
+            setupMapAndOrbs();
+            player.resetPosition();
+            aliens.forEach(a => a.resetPosition());
+            overchargeTime = 0;
+            document.getElementById('statusDisplay').innerText = "NOMINAL";
+            document.getElementById('statusDisplay').className = "normal";
             lastPlayerTick = performance.now();
             lastAlienTick = performance.now();
             return;
@@ -344,38 +384,33 @@ window.onload = () => {
     }
 
     function gameLoop(timestamp) {
-        if (!gameStarted || isDeadPaused || isGameOver) {
+        if (!gameStarted || isDeadPaused || isWinPaused || isGameOver) {
             requestAnimationFrame(gameLoop);
             return;
         }
 
-        // SPEED LOGIC: Player is faster, enemies are slower during overcharge
-        let playerTickRate = (overchargeTime > 0) ? 100 : 160; 
-        let alienTickRate = (overchargeTime > 0) ? 220 : 160;
-
+        let currentPlayerSpeed = (overchargeTime > 0) ? 90 : playerSpeed; 
+        let currentAlienSpeed = (overchargeTime > 0) ? 280 : baseAlienSpeed;
         let needsRedraw = false;
 
-        // Player Move Loop
-        if (timestamp - lastPlayerTick > playerTickRate) {
+        if (timestamp - lastPlayerTick > currentPlayerSpeed) {
             player.update();
             lastPlayerTick = timestamp;
             needsRedraw = true;
             animationFrameCount++;
         }
 
-        // Alien Move Loop
-        if (timestamp - lastAlienTick > alienTickRate) {
+        if (timestamp - lastAlienTick > currentAlienSpeed) {
             aliens.forEach(alien => alien.update(player.x, player.y));
             lastAlienTick = timestamp;
             needsRedraw = true;
         }
 
-        // Only redraw if someone actually moved
         if (needsRedraw) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             if (overchargeTime > 0) {
-                overchargeTime--; // This now ticks down with the player's movement
+                overchargeTime--; 
                 if (overchargeTime === 0) {
                     document.getElementById('statusDisplay').innerText = "NOMINAL";
                     document.getElementById('statusDisplay').className = "normal";
@@ -387,7 +422,6 @@ window.onload = () => {
             aliens.forEach(alien => alien.draw());
             updateUI();
         }
-        
         requestAnimationFrame(gameLoop);
     }
 

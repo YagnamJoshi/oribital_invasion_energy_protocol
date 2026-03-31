@@ -15,7 +15,7 @@
         <div class="menu-container">
             <div id="startScreen" class="overlay active">
                 <h2>SYSTEM STANDBY</h2>
-                <p class="blink">Press ANY KEY to Initialize Audio & Menu</p>
+                <p class="blink">Press ANY KEY or CLICK to Initialize</p>
             </div>
 
             <div id="mainMenu" class="overlay">
@@ -31,28 +31,68 @@
     </div>
 
     <script>
-        let state = 'START';
         const startScreen = document.getElementById('startScreen');
         const mainMenu = document.getElementById('mainMenu');
         const menuItems = document.querySelectorAll('#menuList li:not(.disabled) a');
+        
         let menuIndex = 0;
+        let currentState = 'START'; // Tracks if we are on the start screen or the menu
 
-        // Load your menu music from the assets folder
-        const menuMusic = new Audio('assets/menu_music.mp3'); 
+        // --- AUDIO SETUP ---
+        const startMusic = new Audio('assets/start_music.mp3'); 
+        startMusic.loop = true;
+        
+        const menuMusic = new Audio('assets/menu_music.mp3');
         menuMusic.loop = true;
 
-        document.addEventListener('keydown', (e) => {
-            if (state === 'START') {
-                state = 'MENU';
+        // --- AUTOPLAY START MUSIC ---
+        // Attempt to play immediately on load
+        window.addEventListener('DOMContentLoaded', () => {
+            startMusic.play().catch(() => {
+                // If browser blocks autoplay, silently attach to the first interaction
+                const forcePlay = () => {
+                    if (currentState === 'START') startMusic.play();
+                    document.removeEventListener('keydown', forcePlay);
+                    document.removeEventListener('click', forcePlay);
+                };
+                document.addEventListener('keydown', forcePlay);
+                document.addEventListener('click', forcePlay);
+            });
+        });
+
+        // --- TRANSITION LOGIC ---
+        function transitionToMenu() {
+            if (currentState === 'START') {
+                currentState = 'MENU';
+                
+                // Swap UI
                 startScreen.classList.remove('active');
                 mainMenu.classList.add('active');
                 
-                // Audio is now allowed to play because the user interacted!
-                menuMusic.play().catch(err => console.log("Audio still blocked:", err));
-                return;
+                // Swap Music
+                startMusic.pause();
+                startMusic.currentTime = 0; // Reset start music just in case
+                menuMusic.play().catch(err => console.log("Menu audio blocked:", err));
+            }
+        }
+
+        // Handle Mouse Clicks for transition
+        document.addEventListener('click', () => {
+            if (currentState === 'START') {
+                transitionToMenu();
+            }
+        });
+
+        // --- KEYBOARD NAVIGATION ---
+        document.addEventListener('keydown', (e) => {
+            // 1. If on Start Screen, transition to Menu
+            if (currentState === 'START') {
+                transitionToMenu();
+                return; // Stop here so we don't accidentally move the menu selection immediately
             }
 
-            if (state === 'MENU') {
+            // 2. If on Menu, navigate
+            if (currentState === 'MENU') {
                 if (e.key === 'ArrowUp' || e.key === 'w') {
                     menuIndex = (menuIndex > 0) ? menuIndex - 1 : menuItems.length - 1;
                     updateSelection();
@@ -60,8 +100,7 @@
                     menuIndex = (menuIndex < menuItems.length - 1) ? menuIndex + 1 : 0;
                     updateSelection();
                 } else if (e.key === 'Enter') {
-                    // Stop music before leaving page
-                    menuMusic.pause(); 
+                    menuMusic.pause(); // Stop music before leaving page
                     window.location.href = menuItems[menuIndex].href;
                 }
             }
