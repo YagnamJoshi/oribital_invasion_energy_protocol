@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Mode - Orbital Invasion</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #gameCanvas {
+            background-image: url('assets/space_bg.png'); 
+            background-size: cover;
+            background-position: center;
+            background-color: transparent; 
+            box-shadow: inset 0 0 0 600px rgba(13, 17, 23, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-container">
+            
+            <div id="readyScreen" class="overlay active">
+                <h2>CAMPAIGN MODE</h2>
+                <p class="blink">Press ANY KEY to Generate Sector</p>
+                <p style="font-size: 0.8rem; margin-top: 20px;">Press 'M' anytime to toggle music</p>
+            </div>
+
+            <div id="deathScreen" class="overlay">
+                <h2>SHIP DESTROYED</h2>
+                <p class="blink">Press ANY KEY to Deploy Backup</p>
+            </div>
+
+            <div id="winScreen" class="overlay">
+                <h2 id="levelClearedText">SECTOR CLEARED</h2>
+                <p>Generating next sector. Hostile speeds scaling...</p>
+                <p class="blink">Press ANY KEY to Proceed</p>
+            </div>
+
+            <div id="gameOverScreen" class="overlay">
+                <h2 id="gameOverTitle">SYSTEM FAILURE</h2>
+                <p>FINAL LEVEL: <span id="finalScore">1</span></p>
+                <p class="blink">Press ENTER to restart, ESC for Menu</p>
+            </div>
+
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            
+            <div class="ui-panel">
+                <div class="stat-box">
+                    <h3>CURRENT LEVEL</h3>
+                    <p id="levelDisplay">1</p>
+                </div>
+                <div class="stat-box">
+                    <h3>MAX LEVEL</h3>
+                    <p id="maxLevelDisplay">1</p>
+                </div>
+                <div class="stat-box">
+                    <h3>SCORE</h3>
+                    <p id="scoreDisplay">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>LIVES</h3>
+                    <p id="livesDisplay">3</p>
+                </div>
+                <div class="stat-box status">
+                    <h3>SYSTEM STATUS</h3>
+                    <p id="statusDisplay" class="normal">NOMINAL</p>
+                    <p id="musicStatus" style="font-size: 0.7rem; color: #8b949e; margin-top: 5px;">MUSIC: ON</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let musicActive = localStorage.getItem('musicEnabled') !== 'false';
+        function updateMusicDisplay() {
+            document.getElementById('musicStatus').innerText = `MUSIC: ${musicActive ? 'ON' : 'OFF'}`;
+            window.isMusicMuted = !musicActive; 
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'm') {
+                musicActive = !musicActive;
+                localStorage.setItem('musicEnabled', musicActive);
+                updateMusicDisplay();
+                if (window.bgmGameHandle) {
+                    if (musicActive) window.bgmGameHandle.play();
+                    else window.bgmGameHandle.pause();
+                }
+            }
+        });
+        window.isMusicMuted = !musicActive;
+        setTimeout(updateMusicDisplay, 100);
+    </script>
+    <script src="level_game.js"></script> </body>
+</html>
