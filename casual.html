@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casual Mode - Orbital Invasion</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- NEW: Background Image Styling --- */
+        #gameCanvas {
+            /* Replace 'space_bg.jpg' with your actual image file name */
+            background-image: url('assets/space_bg.png'); 
+            background-size: cover;      /* Stretches/shrinks image to fit the 600x600 canvas */
+            background-position: center; /* Keeps the image centered */
+            background-color: transparent; 
+            
+            /* OPTIONAL: Adds a slight dark overlay so the neon maze and sprites still pop */
+            box-shadow: inset 0 0 0 600px rgba(13, 17, 23, 0.6);
+        }
+    </style>
 </head>
 <body>
     <div class="game-wrapper">

@@ -25,6 +25,31 @@ window.onload = () => {
     const bgmGame = new Audio('assets/casual_music.mp3');
     bgmGame.loop = true;
 
+    // --- NEW: Audio Synthesizer for Retro Movement Sound ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    function playMoveSound() {
+        if (audioCtx.state === 'suspended') audioCtx.resume(); // Wake up audio context if browser paused it
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.type = 'triangle'; // Gives a classic retro video game feel
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime); // Start pitch
+        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1); // Drop pitch quickly
+        
+        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); // Volume (keep it low so it's not annoying)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); // Fade out
+        
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.1); // Sound lasts exactly 0.1 seconds
+    }
+    // --------------------------------------------------------
+
     const initialMap = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1],
@@ -56,7 +81,6 @@ window.onload = () => {
     }
 
     let score = 0;
-    // FIXED: Parse as Integer to prevent string math bugs
     let highScore = parseInt(localStorage.getItem('orbitalHighScore')) || 0; 
     let lives = 3;
     let overchargeTime = 0;
@@ -85,9 +109,8 @@ window.onload = () => {
             if (getTile(nx, ny) !== 1) {
                 let wrappedNx = (nx + COLS) % COLS;
                 
-                // FIXED: Torus Manhattan Distance for Tunnel Logic
                 let distX = Math.abs(targetX - wrappedNx);
-                distX = Math.min(distX, COLS - distX); // Math magic that makes tunnels work
+                distX = Math.min(distX, COLS - distX); 
                 let distY = Math.abs(targetY - ny);
                 
                 let heuristic = distX + distY; 
@@ -123,11 +146,15 @@ window.onload = () => {
             if (this.dirY === 1) this.angle = Math.PI;           
             if (this.dirY === -1) this.angle = 0;                
 
+            // TRIGGER MOVEMENT
             if (getTile(this.x + this.dirX, this.y + this.dirY) !== 1) {
                 this.x += this.dirX; this.y += this.dirY;
                 
                 if (this.x < 0) this.x = COLS - 1;
                 if (this.x >= COLS) this.x = 0;
+
+                // --- NEW: Play the sound when a successful move happens ---
+                playMoveSound();
             }
 
             if (levelMap[this.y][this.x] === 2) {
@@ -145,7 +172,6 @@ window.onload = () => {
                 checkWin();
             }
 
-            // FIXED: Live High Score Updating
             if (score > highScore) {
                 highScore = score;
                 localStorage.setItem('orbitalHighScore', highScore);
@@ -317,6 +343,10 @@ window.onload = () => {
         if (!gameStarted) {
             gameStarted = true;
             document.getElementById('readyScreen').classList.remove('active');
+            
+            // Resume the AudioContext so our synth works
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
             bgmGame.play();
             requestAnimationFrame(gameLoop); 
             return;
