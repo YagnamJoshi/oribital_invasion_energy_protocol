@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbital Invasion: Energy Protocol</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="header">
+            <h1>ORBITAL INVASION: <span>ENERGY PROTOCOL</span></h1>
+        </div>
+        
+        <div class="game-container">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            
+            <div class="ui-panel">
+                <div class="stat-box">
+                    <h3>SCORE</h3>
+                    <p id="scoreDisplay">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>HIGH SCORE</h3>
+                    <p id="highScoreDisplay">0</p>
+                </div>
+                <div class="stat-box status">
+                    <h3>SYSTEM STATUS</h3>
+                    <p id="statusDisplay" class="normal">NOMINAL</p>
+                </div>
+                <div class="instructions">
+                    <p><strong>ARROWS / WASD:</strong> Move Ship</p>
+                    <p><strong>GOAL:</strong> Collect all Energy Orbs.</p>
+                    <p><strong>BIG BATTERIES:</strong> Overcharge weapons to defeat Alien Ships.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
