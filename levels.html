@@ -43,6 +43,12 @@
                 <p class="blink">Press ENTER to restart, ESC for Menu</p>
             </div>
 
+            <div id="pauseScreen" class="overlay">
+                <h2>SYSTEM PAUSED</h2>
+                <p>Current Sector: <span id="pauseLevel">1</span></p>
+                <p class="blink" style="margin-top: 15px; color: #00f0ff;">Press 'P' to Resume</p>
+            </div>
+
             <canvas id="gameCanvas" width="600" height="600"></canvas>
             
             <div class="ui-panel">
@@ -66,6 +72,11 @@
                     <h3>SYSTEM STATUS</h3>
                     <p id="statusDisplay" class="normal">NOMINAL</p>
                     <p id="musicStatus" style="font-size: 0.7rem; color: #8b949e; margin-top: 5px;">MUSIC: ON</p>
+                </div>
+                <div class="stat-box" style="margin-top: 15px;">
+                    <h3 style="color: #8b949e;">CONTROLS</h3>
+                    <p style="font-size: 0.75rem; color: #fff; margin-top: 5px;">[P] - Pause/Resume</p>
+                    <p style="font-size: 0.75rem; color: #ff003c; margin-top: 5px;">[R] - Restart Mission</p>
                 </div>
             </div>
         </div>

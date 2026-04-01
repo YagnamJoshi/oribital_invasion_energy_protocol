@@ -105,6 +105,7 @@ window.onload = () => {
     let isGameOver = false;
     let isDeadPaused = false; 
     let isWinPaused = false;
+    let isPaused = false; // NEW PAUSE STATE
 
     let lastPlayerTick = 0;
     let lastAlienTick = 0;
@@ -169,7 +170,7 @@ window.onload = () => {
             } else if (levelMap[this.y][this.x] === 3) {
                 levelMap[this.y][this.x] = 0;
                 score += 50;
-                overchargeTime = 65; // Reduced to ~5.8 seconds (65 ticks * 90ms)
+                overchargeTime = 65; 
                 document.getElementById('statusDisplay').innerText = `OVERCHARGE ACTIVE (${(overchargeTime * 0.09).toFixed(1)}s)`;
                 document.getElementById('statusDisplay').className = "overcharge";
             }
@@ -279,9 +280,11 @@ window.onload = () => {
         currentLevel = 1;
         overchargeTime = 0;
         
-        // BUG FIX: Reset gameStarted to false so the loop properly pauses waiting for input
         gameStarted = false; 
-        isGameOver = false; isDeadPaused = false; isWinPaused = false;
+        isGameOver = false; 
+        isDeadPaused = false; 
+        isWinPaused = false;
+        isPaused = false; // Reset pause state on init
 
         document.querySelectorAll('.overlay').forEach(el => el.classList.remove('active'));
         document.getElementById('readyScreen').classList.add('active');
@@ -345,7 +348,44 @@ window.onload = () => {
     }
 
     document.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'm') return; 
+        const key = e.key.toLowerCase();
+        if (key === 'm') return; 
+
+        // --- NEW: RESTART LOGIC ---
+        if (key === 'r') {
+            if (confirm("System Alert: Initiate core restart? Progress will be lost.")) {
+                isPaused = false;
+                document.getElementById('pauseScreen').classList.remove('active');
+                initGame();
+                bgmGame.currentTime = 0;
+                if (!window.isMusicMuted && gameStarted) bgmGame.play();
+                return;
+            }
+        }
+
+        // --- NEW: PAUSE LOGIC ---
+        if (key === 'p') {
+            if (gameStarted && !isGameOver && !isDeadPaused && !isWinPaused) {
+                isPaused = !isPaused;
+                const pauseEl = document.getElementById('pauseScreen');
+                if (isPaused) {
+                    pauseEl.classList.add('active');
+                    document.getElementById('pauseLevel').innerText = currentLevel;
+                    if (window.bgmGameHandle) window.bgmGameHandle.pause();
+                } else {
+                    pauseEl.classList.remove('active');
+                    if (!window.isMusicMuted && window.bgmGameHandle) window.bgmGameHandle.play();
+                    
+                    // Reset timing to prevent entities from teleporting
+                    lastPlayerTick = performance.now();
+                    lastAlienTick = performance.now();
+                }
+            }
+            return;
+        }
+
+        // Block movement if paused
+        if (isPaused) return;
 
         if (!gameStarted) {
             gameStarted = true;
@@ -353,7 +393,6 @@ window.onload = () => {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             if (!window.isMusicMuted) bgmGame.play();
             
-            // Sync ticks so enemies don't jump on the first frame
             lastPlayerTick = performance.now();
             lastAlienTick = performance.now();
 
@@ -430,7 +469,8 @@ window.onload = () => {
     }
 
     function gameLoop(timestamp) {
-        if (!gameStarted || isDeadPaused || isWinPaused || isGameOver) {
+        // NEW: Also check for isPaused to halt the loop visually
+        if (!gameStarted || isDeadPaused || isWinPaused || isGameOver || isPaused) {
             requestAnimationFrame(gameLoop);
             return;
         }
@@ -449,7 +489,6 @@ window.onload = () => {
             if (overchargeTime > 0) {
                 overchargeTime--; 
                 
-                // Update UI Timer Dynamically
                 if (overchargeTime > 0) {
                     let secondsLeft = (overchargeTime * 0.09).toFixed(1);
                     document.getElementById('statusDisplay').innerText = `OVERCHARGE ACTIVE (${secondsLeft}s)`;
