@@ -25,12 +25,11 @@ window.onload = () => {
     const bgmGame = new Audio('assets/casual_music.mp3');
     bgmGame.loop = true;
 
-    // --- NEW: Audio Synthesizer for Retro Movement Sound ---
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
 
     function playMoveSound() {
-        if (audioCtx.state === 'suspended') audioCtx.resume(); // Wake up audio context if browser paused it
+        if (audioCtx.state === 'suspended') audioCtx.resume(); 
         
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
@@ -38,17 +37,16 @@ window.onload = () => {
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         
-        osc.type = 'triangle'; // Gives a classic retro video game feel
-        osc.frequency.setValueAtTime(300, audioCtx.currentTime); // Start pitch
-        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1); // Drop pitch quickly
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1); 
         
-        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); // Volume (keep it low so it's not annoying)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); // Fade out
+        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); 
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); 
         
         osc.start(audioCtx.currentTime);
-        osc.stop(audioCtx.currentTime + 0.1); // Sound lasts exactly 0.1 seconds
+        osc.stop(audioCtx.currentTime + 0.1); 
     }
-    // --------------------------------------------------------
 
     const initialMap = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -80,6 +78,7 @@ window.onload = () => {
         return levelMap[y][x];
     }
 
+    // --- STATE VARIABLES ---
     let score = 0;
     let highScore = parseInt(localStorage.getItem('orbitalHighScore')) || 0; 
     let lives = 3;
@@ -94,6 +93,7 @@ window.onload = () => {
     let isGameOver = false;
     let isDeadPaused = false; 
     let isWinPaused = false;
+    let isPaused = false;
 
     let lastPlayerTick = 0;
     let lastAlienTick = 0;
@@ -146,14 +146,12 @@ window.onload = () => {
             if (this.dirY === 1) this.angle = Math.PI;           
             if (this.dirY === -1) this.angle = 0;                
 
-            // TRIGGER MOVEMENT
             if (getTile(this.x + this.dirX, this.y + this.dirY) !== 1) {
                 this.x += this.dirX; this.y += this.dirY;
                 
                 if (this.x < 0) this.x = COLS - 1;
                 if (this.x >= COLS) this.x = 0;
 
-                // --- NEW: Play the sound when a successful move happens ---
                 playMoveSound();
             }
 
@@ -166,9 +164,14 @@ window.onload = () => {
                 levelMap[this.y][this.x] = 0;
                 score += 50;
                 remainingOrbs--;
-                overchargeTime = 50; 
-                document.getElementById('statusDisplay').innerText = "OVERCHARGE ACTIVE";
+                
+                // --- NEW TIMER LOGIC ---
+                overchargeTime = 50; // Total ticks
+                let secondsLeft = (overchargeTime * 0.09).toFixed(1);
+                document.getElementById('statusDisplay').innerText = `OVERCHARGE ACTIVE (${secondsLeft}s)`;
                 document.getElementById('statusDisplay').className = "overcharge";
+                // -----------------------
+                
                 checkWin();
             }
 
@@ -293,14 +296,18 @@ window.onload = () => {
         setupMapAndOrbs();
         score = 0;
         lives = 3;
+        
         baseAlienSpeed = 220; 
         overchargeTime = 0;
         isGameOver = false;
         isDeadPaused = false;
         isWinPaused = false;
+        isPaused = false;
+        
         document.getElementById('gameOverScreen').classList.remove('active');
         document.getElementById('deathScreen').classList.remove('active');
         document.getElementById('winScreen').classList.remove('active');
+        document.getElementById('pauseScreen').classList.remove('active');
         
         player = new Player();
         aliens = [
@@ -340,14 +347,53 @@ window.onload = () => {
     }
 
     document.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        
+        // --- RESTART LOGIC ---
+        if (key === 'r') {
+            if (confirm("Restart game? Progress will be lost.")) {
+                isPaused = false;
+                initGame();
+                bgmGame.currentTime = 0;
+                if (gameStarted) bgmGame.play();
+                lastPlayerTick = performance.now();
+                lastAlienTick = performance.now();
+                return;
+            }
+        }
+
+        // --- PAUSE LOGIC ---
+        if (key === 'p') {
+            if (gameStarted && !isGameOver && !isDeadPaused && !isWinPaused) {
+                isPaused = !isPaused;
+                const pauseEl = document.getElementById('pauseScreen');
+                if (isPaused) {
+                    pauseEl.classList.add('active');
+                    bgmGame.pause();
+                } else {
+                    pauseEl.classList.remove('active');
+                    bgmGame.play();
+                    
+                    lastPlayerTick = performance.now();
+                    lastAlienTick = performance.now();
+                }
+            }
+            return;
+        }
+
+        // Block movement inputs if paused
+        if (isPaused) return;
+
         if (!gameStarted) {
             gameStarted = true;
             document.getElementById('readyScreen').classList.remove('active');
             
-            // Resume the AudioContext so our synth works
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
             bgmGame.play();
+            lastPlayerTick = performance.now();
+            lastAlienTick = performance.now();
+            
             requestAnimationFrame(gameLoop); 
             return;
         }
@@ -357,6 +403,8 @@ window.onload = () => {
                 initGame();
                 bgmGame.currentTime = 0;
                 bgmGame.play();
+                lastPlayerTick = performance.now();
+                lastAlienTick = performance.now();
             }
             if (e.key === 'Escape') window.location.href = 'index.html';
             return;
@@ -414,7 +462,7 @@ window.onload = () => {
     }
 
     function gameLoop(timestamp) {
-        if (!gameStarted || isDeadPaused || isWinPaused || isGameOver) {
+        if (!gameStarted || isDeadPaused || isWinPaused || isGameOver || isPaused) {
             requestAnimationFrame(gameLoop);
             return;
         }
@@ -423,11 +471,25 @@ window.onload = () => {
         let currentAlienSpeed = (overchargeTime > 0) ? 280 : baseAlienSpeed;
         let needsRedraw = false;
 
+        // Player Tick Logic
         if (timestamp - lastPlayerTick > currentPlayerSpeed) {
             player.update();
             lastPlayerTick = timestamp;
             needsRedraw = true;
             animationFrameCount++;
+            
+            // --- NEW: Dynamic Overcharge Countdown Tick ---
+            if (overchargeTime > 0) {
+                overchargeTime--; 
+                if (overchargeTime > 0) {
+                    let secondsLeft = (overchargeTime * 0.09).toFixed(1);
+                    document.getElementById('statusDisplay').innerText = `OVERCHARGE ACTIVE (${secondsLeft}s)`;
+                } else {
+                    document.getElementById('statusDisplay').innerText = "NOMINAL";
+                    document.getElementById('statusDisplay').className = "normal";
+                }
+            }
+            // ----------------------------------------------
         }
 
         if (timestamp - lastAlienTick > currentAlienSpeed) {
@@ -438,15 +500,6 @@ window.onload = () => {
 
         if (needsRedraw) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (overchargeTime > 0) {
-                overchargeTime--; 
-                if (overchargeTime === 0) {
-                    document.getElementById('statusDisplay').innerText = "NOMINAL";
-                    document.getElementById('statusDisplay').className = "normal";
-                }
-            }
-
             drawMap();
             player.draw();
             aliens.forEach(alien => alien.draw());
@@ -456,4 +509,4 @@ window.onload = () => {
     }
 
     initGame(); 
-};
+};  
