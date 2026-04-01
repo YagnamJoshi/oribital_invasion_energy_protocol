@@ -35,9 +35,11 @@
         const startScreen = document.getElementById('startScreen');
         const mainMenu = document.getElementById('mainMenu');
         const menuItems = document.querySelectorAll('#menuList li:not(.disabled) a');
-        
+        const menuOptions = document.querySelectorAll('#menuList li:not(.disabled)');
+        const musicToggleOption = document.getElementById('musicToggleOption');
+
         let menuIndex = 0;
-        let currentState = 'START'; // Tracks if we are on the start screen or the menu
+        let currentState = 'START';
 
         // --- AUDIO SETUP ---
         const startMusic = new Audio('assets/start_music.mp3'); 
@@ -46,38 +48,77 @@
         const menuMusic = new Audio('assets/menu_music.mp3');
         menuMusic.loop = true;
 
+        // --- MUSIC STATE ---
+        let isMusicOn = true;
+
+        // Load saved setting
+        const saved = localStorage.getItem('musicEnabled');
+        if (saved !== null) {
+            isMusicOn = saved === 'true';
+        }
+        musicToggleOption.textContent = `Music: ${isMusicOn ? 'ON' : 'OFF'}`;
+
+        function toggleMusic() {
+            isMusicOn = !isMusicOn;
+            musicToggleOption.textContent = `Music: ${isMusicOn ? 'ON' : 'OFF'}`;
+            localStorage.setItem('musicEnabled', isMusicOn);
+
+            if (isMusicOn) {
+                if (currentState === 'START') {
+                    startMusic.play();
+                } else {
+                    menuMusic.play();
+                }
+            } else {
+                startMusic.pause();
+                menuMusic.pause();
+            }
+        }
+
+        // Click toggle
+        musicToggleOption.addEventListener('click', toggleMusic);
+
         // --- AUTOPLAY START MUSIC ---
-        // Attempt to play immediately on load
-        window.addEventListener('DOMContentLoaded', () => {
-            startMusic.play().catch(() => {
-                // If browser blocks autoplay, silently attach to the first interaction
-                const forcePlay = () => {
-                    if (currentState === 'START') startMusic.play();
-                    document.removeEventListener('keydown', forcePlay);
-                    document.removeEventListener('click', forcePlay);
-                };
-                document.addEventListener('keydown', forcePlay);
-                document.addEventListener('click', forcePlay);
-            });
+       window.addEventListener('DOMContentLoaded', () => {
+            if (!isMusicOn) return;
+
+            const tryPlay = () => {
+                startMusic.play().catch(() => {});
+            };
+
+            // Try once
+            tryPlay();
+
+            // Force play on first interaction
+            const unlockAudio = () => {
+                if (currentState === 'START' && isMusicOn) {
+                    startMusic.play();
+                }
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('keydown', unlockAudio);
+            };
+
+            document.addEventListener('click', unlockAudio);
+            document.addEventListener('keydown', unlockAudio);
         });
 
-        // --- TRANSITION LOGIC ---
+        // --- TRANSITION ---
         function transitionToMenu() {
             if (currentState === 'START') {
                 currentState = 'MENU';
                 
-                // Swap UI
                 startScreen.classList.remove('active');
                 mainMenu.classList.add('active');
                 
-                // Swap Music
                 startMusic.pause();
-                startMusic.currentTime = 0; // Reset start music just in case
-                menuMusic.play().catch(err => console.log("Menu audio blocked:", err));
+                startMusic.currentTime = 0;
+
+                if (isMusicOn) {
+                    menuMusic.play().catch(err => console.log("Menu audio blocked:", err));
+                }
             }
         }
 
-        // Handle Mouse Clicks for transition
         document.addEventListener('click', () => {
             if (currentState === 'START') {
                 transitionToMenu();
@@ -86,30 +127,37 @@
 
         // --- KEYBOARD NAVIGATION ---
         document.addEventListener('keydown', (e) => {
-            // 1. If on Start Screen, transition to Menu
+
             if (currentState === 'START') {
                 transitionToMenu();
-                return; // Stop here so we don't accidentally move the menu selection immediately
+                return;
             }
 
-            // 2. If on Menu, navigate
             if (currentState === 'MENU') {
                 if (e.key === 'ArrowUp' || e.key === 'w') {
-                    menuIndex = (menuIndex > 0) ? menuIndex - 1 : menuItems.length - 1;
+                    menuIndex = (menuIndex > 0) ? menuIndex - 1 : menuOptions.length - 1;
                     updateSelection();
-                } else if (e.key === 'ArrowDown' || e.key === 's') {
-                    menuIndex = (menuIndex < menuItems.length - 1) ? menuIndex + 1 : 0;
+                } 
+                else if (e.key === 'ArrowDown' || e.key === 's') {
+                    menuIndex = (menuIndex < menuOptions.length - 1) ? menuIndex + 1 : 0;
                     updateSelection();
-                } else if (e.key === 'Enter') {
-                    menuMusic.pause(); // Stop music before leaving page
-                    window.location.href = menuItems[menuIndex].href;
+                } 
+                else if (e.key === 'Enter') {
+                    const selectedItem = menuOptions[menuIndex];
+
+                    if (selectedItem.id === 'musicToggleOption') {
+                        toggleMusic();
+                    } else {
+                        menuMusic.pause();
+                        window.location.href = selectedItem.querySelector('a').href;
+                    }
                 }
             }
         });
 
         function updateSelection() {
             document.querySelectorAll('#menuList li').forEach(li => li.classList.remove('selected'));
-            menuItems[menuIndex].parentElement.classList.add('selected');
+            menuOptions[menuIndex].classList.add('selected');
         }
     </script>
 </body>

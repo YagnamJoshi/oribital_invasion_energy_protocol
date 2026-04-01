@@ -48,10 +48,8 @@ window.onload = () => {
     // --- PROCEDURAL SYMMETRIC MAP GENERATOR ---
     let levelMap = [];
     function generateRandomMap() {
-        // Start with a solid block of walls (1)
         let map = Array(ROWS).fill().map(() => Array(COLS).fill(1)); 
 
-        // Helper to carve out paths symmetrically across all 4 quadrants
         function carve(r, c, val) {
             map[r][c] = val;
             map[r][COLS - 1 - c] = val;
@@ -62,20 +60,19 @@ window.onload = () => {
         // 1. Carve the main outer loop
         for(let i=1; i<10; i++) { carve(1, i, 2); carve(i, 1, 2); }
 
-        // 2. Random procedural carving for inner paths
-        for(let i=0; i<35; i++) {
+        // 2. Random procedural carving for inner paths (Slightly more open)
+        for(let i=0; i<45; i++) {
             let r = Math.floor(Math.random() * 8) + 2; 
             let c = Math.floor(Math.random() * 8) + 2; 
             carve(r, c, 2);
-            // Ensure paths connect by carving an adjacent block
-            if (Math.random() > 0.5) carve(r, c+1, 2); else carve(r+1, c, 2);
+            if (Math.random() > 0.4) carve(r, c+1, 2); else carve(r+1, c, 2);
         }
 
         // 3. Clear the Center Box (Alien Spawn) and Player Escape Shaft
         for(let r=8; r<=11; r++) {
             for(let c=8; c<=11; c++) { map[r][c] = 0; }
         }
-        carve(12, 9, 0); carve(13, 9, 0); // Open the bottom shaft
+        carve(12, 9, 0); carve(13, 9, 0); 
 
         // 4. Force Tunnel Openings on Row 9
         map[9][0] = 0; map[9][1] = 0; map[9][18] = 0; map[9][19] = 0;
@@ -87,7 +84,7 @@ window.onload = () => {
     }
 
     function getTile(x, y) {
-        if ((y === 8 || y === 12) && (x < 0 || x >= COLS)) return 0;
+        if ((y === 8 || y === 12) && (x < 0 || x >= COLS)) return 0; // Wrap around tunnels
         if (y < 0 || y >= ROWS || x < 0 || x >= COLS) return 1;
         return levelMap[y][x];
     }
@@ -100,10 +97,11 @@ window.onload = () => {
     let overchargeTime = 0;
     let animationFrameCount = 0;
     
-    let baseAlienSpeed = 260; 
-    let playerSpeed = 160;
+    let baseAlienSpeed = 350; // Starts very slow
+    let playerSpeed = 150;
 
     let gameStarted = false; 
+    let loopRunning = false;
     let isGameOver = false;
     let isDeadPaused = false; 
     let isWinPaused = false;
@@ -130,7 +128,7 @@ window.onload = () => {
                 
                 if (algoType === 'A*') cost = 1 + heuristic; 
                 else if (algoType === 'BFS') cost = heuristic; 
-                else if (algoType === 'UCS') cost = Math.random() * 10; 
+                else if (algoType === 'UCS') cost = Math.random() * 10; // Random wandering
 
                 if (cost < minCost) { minCost = cost; bestMove = dir; }
             }
@@ -157,7 +155,7 @@ window.onload = () => {
             if (this.dirY === -1) this.angle = 0;                
 
             if (getTile(this.x + this.dirX, this.y + this.dirY) !== 1) {
-                this.prevX = this.x; this.prevY = this.y; // Store for collision check
+                this.prevX = this.x; this.prevY = this.y; 
                 this.x += this.dirX; this.y += this.dirY;
                 
                 if (this.x < 0) this.x = COLS - 1;
@@ -171,7 +169,7 @@ window.onload = () => {
             } else if (levelMap[this.y][this.x] === 3) {
                 levelMap[this.y][this.x] = 0;
                 score += 50;
-                overchargeTime = 80; // Increased to give you ~8 seconds of power
+                overchargeTime = 80; 
                 document.getElementById('statusDisplay').innerText = "OVERCHARGE ACTIVE";
                 document.getElementById('statusDisplay').className = "overcharge";
             }
@@ -211,7 +209,7 @@ window.onload = () => {
         update(playerX, playerY) {
             let targetX = playerX; let targetY = playerY;
             if (overchargeTime > 0) {
-                targetX = COLS - playerX; targetY = ROWS - playerY;
+                targetX = COLS - playerX; targetY = ROWS - playerY; // Run away
             }
 
             let move = getNextMove(this.x, this.y, targetX, targetY, this.algorithm);
@@ -221,7 +219,7 @@ window.onload = () => {
             if (move.dy === -1) this.angle = Math.PI;          
             if (move.dy === 1) this.angle = 0;                 
 
-            this.prevX = this.x; this.prevY = this.y; // Store for collision check
+            this.prevX = this.x; this.prevY = this.y; 
             this.x += move.dx; this.y += move.dy;
             
             if (this.x < 0) this.x = COLS - 1;
@@ -241,7 +239,7 @@ window.onload = () => {
             if (currentSprite.complete && currentSprite.naturalHeight !== 0) {
                 ctx.drawImage(currentSprite, -TILE_SIZE/2, -TILE_SIZE/2, TILE_SIZE, TILE_SIZE);
             } else {
-                ctx.fillStyle = '#ff003c';
+                ctx.fillStyle = (this.algorithm === 'A*') ? '#ff003c' : (this.algorithm === 'BFS' ? '#ff66b2' : '#ff9900');
                 ctx.fillRect(-10, -10, 20, 20);
             }
             ctx.globalAlpha = 1.0;
@@ -252,28 +250,29 @@ window.onload = () => {
     let player;
     let aliens = [];
 
-    // --- ALGORITHM ASSIGNMENT & SCALING ---
+    // --- DYNAMIC ALGORITHM ASSIGNMENT & SCALING ---
     function spawnAliensForLevel(level) {
         let spawnList = [];
-        // Base Squad: 1 of each algorithm
-        spawnList.push(new Alien(9, 9, sprites.alienUCS, 'UCS'));
-        spawnList.push(new Alien(10, 9, sprites.alienBFS, 'BFS'));
-        spawnList.push(new Alien(9, 10, sprites.alienAStar, 'A*'));
-
-        // Add more aliens based on current level
-        let extraAliens = level - 1; 
-        let algos = ['A*', 'BFS', 'UCS'];
-        let spriteRefs = [sprites.alienAStar, sprites.alienBFS, sprites.alienUCS];
+        // Determine total number of aliens (starts at 1, maxes out at 7)
+        let totalAliens = Math.min(level, 7); 
         
-        for(let i = 0; i < extraAliens; i++) {
-            let aType = i % 3; 
-            let sx = 8 + Math.floor(Math.random() * 4); 
-            let sy = 8 + Math.floor(Math.random() * 4);
+        let algos = ['UCS', 'BFS', 'A*'];
+        let spriteRefs = [sprites.alienUCS, sprites.alienBFS, sprites.alienAStar];
+        
+        for(let i = 0; i < totalAliens; i++) {
+            let aType = 0; // Default to wandering (UCS)
+            if (level >= 2 && i % 2 === 1) aType = 1; // Introduce BFS hunters
+            if (level >= 4 && i % 3 === 2) aType = 2; // Introduce A* smart hunters
+
+            // Spawn them neatly inside the center box
+            let sx = 8 + (i % 4); 
+            let sy = 8 + Math.floor(i / 4);
+            
             spawnList.push(new Alien(sx, sy, spriteRefs[aType], algos[aType]));
         }
         
-        // Speed scaling (max speed capped at 90ms)
-        baseAlienSpeed = Math.max(90, 260 - (level * 20));
+        // Speed scaling (Base speed gets progressively faster, capped at 120ms)
+        baseAlienSpeed = Math.max(120, 380 - (level * 35));
         return spawnList;
     }
 
@@ -308,10 +307,8 @@ window.onload = () => {
         }
     }
 
-    // --- BULLETPROOF COLLISION CHECKER ---
     function checkCollisions() {
         aliens.forEach(alien => {
-            // Check for exact tile overlap OR if they swapped tiles between ticks
             let directHit = (alien.x === player.x && alien.y === player.y);
             let swapHit = (alien.x === player.prevX && alien.y === player.prevY && 
                            alien.prevX === player.x && alien.prevY === player.y);
@@ -326,10 +323,9 @@ window.onload = () => {
             }
         });
 
-        // Safely remove dead aliens
         aliens = aliens.filter(a => !a.isDead);
 
-        // Check if level is wiped clean
+        // THE WIN CONDITION: All enemies eaten!
         if (aliens.length === 0 && !isWinPaused && !isGameOver && !isDeadPaused) {
             isWinPaused = true;
             document.getElementById('levelClearedText').innerText = `SECTOR ${currentLevel} CLEARED`;
@@ -350,6 +346,7 @@ window.onload = () => {
         document.getElementById('levelDisplay').innerText = currentLevel;
     }
 
+    // Controls & Game State Triggers
     document.addEventListener('keydown', (e) => {
         if (e.key.toLowerCase() === 'm') return; 
 
@@ -358,7 +355,12 @@ window.onload = () => {
             document.getElementById('readyScreen').classList.remove('active');
             if (audioCtx.state === 'suspended') audioCtx.resume();
             if (!window.isMusicMuted) bgmGame.play();
-            requestAnimationFrame(gameLoop); 
+            
+            // Prevent multiple loops from spawning
+            if (!loopRunning) {
+                requestAnimationFrame(gameLoop); 
+                loopRunning = true;
+            }
             return;
         }
 
@@ -444,15 +446,14 @@ window.onload = () => {
             needsRedraw = true;
             animationFrameCount++;
             
-            // Decoupled Timer Fix: Power decays reliably during player ticks
             if (overchargeTime > 0) {
                 overchargeTime--; 
                 if (overchargeTime === 0) {
                     document.getElementById('statusDisplay').innerText = "NOMINAL";
                     document.getElementById('statusDisplay').className = "normal";
                     
-                    // --- ANTI-SOFTLOCK EMERGENCY DROP ---
-                    // Drops a battery if the board has aliens but no batteries left
+                    // --- THE ENDURANCE HUNT ANTI-SOFTLOCK ---
+                    // If power runs out and aliens are alive, instantly respawn all 4 corner batteries
                     let hasBattery = false;
                     for(let r=0; r<ROWS; r++) {
                         for(let c=0; c<COLS; c++) {
@@ -460,8 +461,10 @@ window.onload = () => {
                         }
                     }
                     if (!hasBattery && aliens.length > 0) {
-                        levelMap[10][9] = 3; 
-                        levelMap[10][10] = 3; // Drops 2 in the center to be safe
+                        levelMap[1][1] = 3; 
+                        levelMap[1][COLS-2] = 3; 
+                        levelMap[ROWS-2][1] = 3; 
+                        levelMap[ROWS-2][COLS-2] = 3; 
                     }
                 }
             }
@@ -474,7 +477,6 @@ window.onload = () => {
             needsRedraw = true;
         }
 
-        // Dedicated Collision Phase
         checkCollisions();
 
         if (needsRedraw) {
