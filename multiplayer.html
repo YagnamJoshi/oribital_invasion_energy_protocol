@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Versus Mode - Orbital Invasion</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #gameCanvas {
+            background-image: url('assets/space_bg.png'); 
+            background-size: cover;
+            background-position: center;
+            background-color: #0d1117; 
+            box-shadow: inset 0 0 0 800px rgba(13, 17, 23, 0.7);
+        }
+        /* Multiplayer Menu Styles */
+        #multiplayerMenu {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.9); border: 2px solid #00f0ff; padding: 30px; border-radius: 10px;
+            z-index: 100;
+        }
+        .menu-btn {
+            background: #00f0ff; color: #000; border: none; padding: 10px 20px;
+            margin: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 5px;
+        }
+        .menu-btn:hover { background: #00ffaa; }
+        #joinCodeInput {
+            padding: 10px; font-size: 1.2rem; text-align: center; margin-bottom: 10px;
+            background: #222; color: #00f0ff; border: 1px solid #00f0ff;
+        }
+        /* Mobile Controls */
+        #mobileControls {
+            display: none; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            width: 180px; height: 180px; z-index: 50;
+        }
+        .d-btn {
+            position: absolute; width: 60px; height: 60px;
+            background: rgba(0, 240, 255, 0.2); border: 2px solid #00f0ff; border-radius: 15px;
+            color: white; font-size: 24px; display: flex; justify-content: center; align-items: center;
+            user-select: none;
+        }
+        .d-btn:active { background: rgba(0, 240, 255, 0.6); }
+        #btn-up { top: 0; left: 60px; }
+        #btn-down { bottom: 0; left: 60px; }
+        #btn-left { top: 60px; left: 0; }
+        #btn-right { top: 60px; right: 0; }
+
+        @media (max-width: 768px) {
+            #mobileControls { display: block; }
+            canvas { max-width: 100vw; height: auto; }
+            .ui-panel { flex-direction: row; flex-wrap: wrap; justify-content: space-around; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-container">
+            
+            <div id="multiplayerMenu" class="overlay active">
+                <h2>P2P VERSUS MODE</h2>
+                <div id="hostSection">
+                    <button class="menu-btn" id="btnHost">Host Game</button>
+                    <p id="hostIdDisplay" style="color: #00ffaa; margin-top: 10px; display: none;">Generating Code...</p>
+                </div>
+                <hr style="width: 80%; border-color: #333; margin: 20px 0;">
+                <div id="joinSection">
+                    <input type="text" id="joinCodeInput" placeholder="Enter Host Code">
+                    <button class="menu-btn" id="btnJoin">Join Game</button>
+                </div>
+                <p id="connectionStatus" style="color: #ff003c; margin-top: 15px;"></p>
+            </div>
+
+            <div id="pauseScreen" class="overlay">
+                <h2>SYSTEM PAUSED</h2>
+                <p class="blink" style="margin-top: 15px; color: #00f0ff;">Host controls Pause/Resume</p>
+            </div>
+
+            <div id="gameOverScreen" class="overlay">
+                <h2 id="gameOverTitle">MATCH OVER</h2>
+                <p id="winnerText" class="blink"></p>
+                <p>P1 Score: <span id="p1FinalScore">0</span></p>
+                <p>P2 Score: <span id="p2FinalScore">0</span></p>
+                <p style="margin-top: 15px; font-size: 0.8rem; color: #8b949e;">Host controls Restart [R]</p>
+            </div>
+
+            <canvas id="gameCanvas" width="900" height="600"></canvas>
+            
+            <div class="ui-panel">
+                <div class="stat-box" style="border-color: #00f0ff;">
+                    <h3 style="color: #00f0ff;">P1 (HOST)</h3>
+                    <p id="p1ScoreDisplay">0</p>
+                </div>
+                <div class="stat-box" style="border-color: #ff00ff;">
+                    <h3 style="color: #ff00ff;">P2 (JOIN)</h3>
+                    <p id="p2ScoreDisplay">0</p>
+                </div>
+                <div class="stat-box status">
+                    <h3>ORBS</h3>
+                    <p id="orbsDisplay" class="normal">0</p>
+                </div>
+                <div class="stat-box" style="margin-top: 15px;">
+                    <h3 style="color: #8b949e;">HOST CONTROLS</h3>
+                    <p style="font-size: 0.75rem; color: #fff; margin-top: 5px;">[P] Pause  |  [R] Restart</p>
+                </div>
+            </div>
+            
+            <div id="mobileControls">
+                <div class="d-btn" id="btn-up">▲</div>
+                <div class="d-btn" id="btn-left">◀</div>
+                <div class="d-btn" id="btn-right">▶</div>
+                <div class="d-btn" id="btn-down">▼</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="multiplayer_game.js"></script>
+</body>
+</html>
