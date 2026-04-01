@@ -60,7 +60,7 @@ window.onload = () => {
         // 1. Carve the main outer loop
         for(let i=1; i<10; i++) { carve(1, i, 2); carve(i, 1, 2); }
 
-        // 2. Random procedural carving for inner paths (Slightly more open)
+        // 2. Random procedural carving for inner paths
         for(let i=0; i<45; i++) {
             let r = Math.floor(Math.random() * 8) + 2; 
             let c = Math.floor(Math.random() * 8) + 2; 
@@ -97,7 +97,7 @@ window.onload = () => {
     let overchargeTime = 0;
     let animationFrameCount = 0;
     
-    let baseAlienSpeed = 350; // Starts very slow
+    let baseAlienSpeed = 350; // Starts slow
     let playerSpeed = 150;
 
     let gameStarted = false; 
@@ -169,8 +169,8 @@ window.onload = () => {
             } else if (levelMap[this.y][this.x] === 3) {
                 levelMap[this.y][this.x] = 0;
                 score += 50;
-                overchargeTime = 80; 
-                document.getElementById('statusDisplay').innerText = "OVERCHARGE ACTIVE";
+                overchargeTime = 65; // Reduced to ~5.8 seconds (65 ticks * 90ms)
+                document.getElementById('statusDisplay').innerText = `OVERCHARGE ACTIVE (${(overchargeTime * 0.09).toFixed(1)}s)`;
                 document.getElementById('statusDisplay').className = "overcharge";
             }
         }
@@ -250,28 +250,24 @@ window.onload = () => {
     let player;
     let aliens = [];
 
-    // --- DYNAMIC ALGORITHM ASSIGNMENT & SCALING ---
     function spawnAliensForLevel(level) {
         let spawnList = [];
-        // Determine total number of aliens (starts at 1, maxes out at 7)
         let totalAliens = Math.min(level, 7); 
         
         let algos = ['UCS', 'BFS', 'A*'];
         let spriteRefs = [sprites.alienUCS, sprites.alienBFS, sprites.alienAStar];
         
         for(let i = 0; i < totalAliens; i++) {
-            let aType = 0; // Default to wandering (UCS)
-            if (level >= 2 && i % 2 === 1) aType = 1; // Introduce BFS hunters
-            if (level >= 4 && i % 3 === 2) aType = 2; // Introduce A* smart hunters
+            let aType = 0; 
+            if (level >= 2 && i % 2 === 1) aType = 1; 
+            if (level >= 4 && i % 3 === 2) aType = 2; 
 
-            // Spawn them neatly inside the center box
             let sx = 8 + (i % 4); 
             let sy = 8 + Math.floor(i / 4);
             
             spawnList.push(new Alien(sx, sy, spriteRefs[aType], algos[aType]));
         }
         
-        // Speed scaling (Base speed gets progressively faster, capped at 120ms)
         baseAlienSpeed = Math.max(120, 380 - (level * 35));
         return spawnList;
     }
@@ -283,7 +279,10 @@ window.onload = () => {
         currentLevel = 1;
         overchargeTime = 0;
         
+        // BUG FIX: Reset gameStarted to false so the loop properly pauses waiting for input
+        gameStarted = false; 
         isGameOver = false; isDeadPaused = false; isWinPaused = false;
+
         document.querySelectorAll('.overlay').forEach(el => el.classList.remove('active'));
         document.getElementById('readyScreen').classList.add('active');
         
@@ -325,7 +324,6 @@ window.onload = () => {
 
         aliens = aliens.filter(a => !a.isDead);
 
-        // THE WIN CONDITION: All enemies eaten!
         if (aliens.length === 0 && !isWinPaused && !isGameOver && !isDeadPaused) {
             isWinPaused = true;
             document.getElementById('levelClearedText').innerText = `SECTOR ${currentLevel} CLEARED`;
@@ -346,7 +344,6 @@ window.onload = () => {
         document.getElementById('levelDisplay').innerText = currentLevel;
     }
 
-    // Controls & Game State Triggers
     document.addEventListener('keydown', (e) => {
         if (e.key.toLowerCase() === 'm') return; 
 
@@ -356,7 +353,10 @@ window.onload = () => {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             if (!window.isMusicMuted) bgmGame.play();
             
-            // Prevent multiple loops from spawning
+            // Sync ticks so enemies don't jump on the first frame
+            lastPlayerTick = performance.now();
+            lastAlienTick = performance.now();
+
             if (!loopRunning) {
                 requestAnimationFrame(gameLoop); 
                 loopRunning = true;
@@ -448,12 +448,15 @@ window.onload = () => {
             
             if (overchargeTime > 0) {
                 overchargeTime--; 
-                if (overchargeTime === 0) {
+                
+                // Update UI Timer Dynamically
+                if (overchargeTime > 0) {
+                    let secondsLeft = (overchargeTime * 0.09).toFixed(1);
+                    document.getElementById('statusDisplay').innerText = `OVERCHARGE ACTIVE (${secondsLeft}s)`;
+                } else {
                     document.getElementById('statusDisplay').innerText = "NOMINAL";
                     document.getElementById('statusDisplay').className = "normal";
                     
-                    // --- THE ENDURANCE HUNT ANTI-SOFTLOCK ---
-                    // If power runs out and aliens are alive, instantly respawn all 4 corner batteries
                     let hasBattery = false;
                     for(let r=0; r<ROWS; r++) {
                         for(let c=0; c<COLS; c++) {
