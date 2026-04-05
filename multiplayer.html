@@ -6,104 +6,317 @@
     <title>Versus Mode - Orbital Invasion</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* ── Canvas ── */
         #gameCanvas {
-            background-image: url('assets/space_bg.png'); 
+            background-image: url('assets/space_bg.png');
             background-size: cover;
             background-position: center;
-            background-color: #0d1117; 
-            box-shadow: inset 0 0 0 800px rgba(13, 17, 23, 0.7);
+            background-color: #0d1117;
+            box-shadow: inset 0 0 0 600px rgba(13, 17, 23, 0.65);
         }
-        /* Multiplayer Menu Styles */
+
+        /* ── Multiplayer lobby overlay ── */
         #multiplayerMenu {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(0, 0, 0, 0.9); border: 2px solid #00f0ff; padding: 30px; border-radius: 10px;
-            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 30px 40px;
+            text-align: center;
         }
+
+        #multiplayerMenu h2 {
+            font-size: 2rem;
+            margin-bottom: 6px;
+        }
+
+        #multiplayerMenu .subtitle {
+            color: #8b949e;
+            font-size: 0.8rem;
+            margin-bottom: 28px;
+            letter-spacing: 1px;
+        }
+
+        .mp-columns {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .mp-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mp-divider {
+            width: 1px;
+            height: 160px;
+            background: linear-gradient(to bottom, transparent, #30363d, transparent);
+            align-self: center;
+        }
+
+        .col-label {
+            font-size: 0.75rem;
+            color: #8b949e;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
         .menu-btn {
-            background: #00f0ff; color: #000; border: none; padding: 10px 20px;
-            margin: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 5px;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 10px 28px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            width: 100%;
         }
-        .menu-btn:hover { background: #00ffaa; }
+        .menu-btn:hover:not(:disabled) {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+        .menu-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Room code display (host) */
+        #roomCodeBox {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        #roomCodeBox .code-label {
+            font-size: 0.7rem;
+            color: #8b949e;
+            letter-spacing: 2px;
+        }
+        #roomCodeDisplay {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #00ffaa;
+            letter-spacing: 8px;
+            text-shadow: 0 0 20px rgba(0, 255, 170, 0.6);
+            background: rgba(0, 255, 170, 0.05);
+            border: 1px solid rgba(0, 255, 170, 0.3);
+            padding: 8px 20px;
+            border-radius: 4px;
+        }
+
+        /* Join input */
         #joinCodeInput {
-            padding: 10px; font-size: 1.2rem; text-align: center; margin-bottom: 10px;
-            background: #222; color: #00f0ff; border: 1px solid #00f0ff;
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 1.4rem;
+            text-align: center;
+            letter-spacing: 6px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            background: #0d1117;
+            color: var(--neon-blue);
+            border: 2px solid #30363d;
+            border-radius: 4px;
+            outline: none;
+            box-sizing: border-box;
+            text-transform: uppercase;
+            transition: border-color 0.2s;
         }
-        /* Mobile Controls */
+        #joinCodeInput:focus { border-color: var(--neon-blue); }
+
+        #connectionStatus {
+            margin-top: 18px;
+            font-size: 0.85rem;
+            min-height: 1.2em;
+            color: #ff003c;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Game-over overlay ── */
+        #gameOverScreen { gap: 8px; }
+        #gameOverScreen h2 { margin-bottom: 8px; }
+        #winnerText { font-size: 1.4rem; color: #fce205; margin-bottom: 12px; }
+        .score-row { display: flex; gap: 30px; justify-content: center; }
+        .score-item { text-align: center; }
+        .score-item .s-label { font-size: 0.7rem; color: #8b949e; letter-spacing: 1px; }
+        .score-item .s-val { font-size: 1.8rem; font-weight: bold; }
+        #gameOverScreen .hint {
+            font-size: 0.75rem; color: #8b949e; margin-top: 10px;
+        }
+
+        /* ── Pause overlay ── */
+        #pauseScreen h2 { margin-bottom: 12px; }
+        #pauseScreen p { color: #8b949e; font-size: 0.9rem; }
+
+        /* ── UI Panel overrides for multiplayer ── */
+        .stat-box.p1-box { border-left-color: #00f0ff; }
+        .stat-box.p2-box { border-left-color: #ff00ff; }
+        .stat-box.p1-box h3 { color: #00f0ff; }
+        .stat-box.p2-box h3 { color: #ff00ff; }
+
+        .lives-display { font-size: 1rem; color: #ff003c; letter-spacing: 2px; }
+
+        .overcharge-bar-wrap {
+            margin-top: 6px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 3px;
+            height: 6px;
+            overflow: hidden;
+        }
+        .overcharge-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.15s;
+        }
+        .p1-bar { background: linear-gradient(to right, #00f0ff, #00ffaa); box-shadow: 0 0 6px #00f0ff; }
+        .p2-bar { background: linear-gradient(to right, #ff00ff, #ff0088); box-shadow: 0 0 6px #ff00ff; }
+
+        .host-hint {
+            font-size: 0.72rem;
+            color: #30363d;
+            margin-top: 4px;
+            line-height: 1.6;
+        }
+
+        /* ── Mobile d-pad ── */
         #mobileControls {
-            display: none; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            width: 180px; height: 180px; z-index: 50;
+            display: none;
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 180px;
+            height: 180px;
+            z-index: 50;
         }
         .d-btn {
-            position: absolute; width: 60px; height: 60px;
-            background: rgba(0, 240, 255, 0.2); border: 2px solid #00f0ff; border-radius: 15px;
-            color: white; font-size: 24px; display: flex; justify-content: center; align-items: center;
+            position: absolute;
+            width: 60px; height: 60px;
+            background: rgba(0, 240, 255, 0.15);
+            border: 2px solid #00f0ff;
+            border-radius: 12px;
+            color: white;
+            font-size: 20px;
+            display: flex; justify-content: center; align-items: center;
             user-select: none;
+            touch-action: none;
         }
-        .d-btn:active { background: rgba(0, 240, 255, 0.6); }
-        #btn-up { top: 0; left: 60px; }
-        #btn-down { bottom: 0; left: 60px; }
-        #btn-left { top: 60px; left: 0; }
+        .d-btn:active { background: rgba(0, 240, 255, 0.5); }
+        #btn-up    { top: 0;    left: 60px; }
+        #btn-down  { bottom: 0; left: 60px; }
+        #btn-left  { top: 60px; left: 0; }
         #btn-right { top: 60px; right: 0; }
 
         @media (max-width: 768px) {
             #mobileControls { display: block; }
             canvas { max-width: 100vw; height: auto; }
             .ui-panel { flex-direction: row; flex-wrap: wrap; justify-content: space-around; gap: 5px; }
+            .mp-columns { flex-direction: column; }
+            .mp-divider { width: 80%; height: 1px; }
         }
     </style>
 </head>
 <body>
     <div class="game-wrapper">
         <div class="game-container">
-            
+
+            <!-- ── Lobby ── -->
             <div id="multiplayerMenu" class="overlay active">
-                <h2>P2P VERSUS MODE</h2>
-                <div id="hostSection">
-                    <button class="menu-btn" id="btnHost">Host Game</button>
-                    <p id="hostIdDisplay" style="color: #00ffaa; margin-top: 10px; display: none;">Generating Code...</p>
+                <h2>VERSUS MODE</h2>
+                <p class="subtitle">P2P · CODE-BASED MATCHMAKING</p>
+
+                <div class="mp-columns">
+                    <!-- Host column -->
+                    <div class="mp-col" id="hostSection">
+                        <p class="col-label">CREATE ROOM</p>
+                        <button class="menu-btn" id="btnHost">HOST GAME</button>
+                        <div id="roomCodeBox">
+                            <p class="code-label">SHARE THIS CODE</p>
+                            <div id="roomCodeDisplay">------</div>
+                        </div>
+                    </div>
+
+                    <div class="mp-divider"></div>
+
+                    <!-- Join column -->
+                    <div class="mp-col" id="joinSection">
+                        <p class="col-label">JOIN ROOM</p>
+                        <input type="text" id="joinCodeInput" placeholder="XXXXXX" maxlength="6">
+                        <button class="menu-btn" id="btnJoin">JOIN GAME</button>
+                    </div>
                 </div>
-                <hr style="width: 80%; border-color: #333; margin: 20px 0;">
-                <div id="joinSection">
-                    <input type="text" id="joinCodeInput" placeholder="Enter Host Code">
-                    <button class="menu-btn" id="btnJoin">Join Game</button>
-                </div>
-                <p id="connectionStatus" style="color: #ff003c; margin-top: 15px;"></p>
+
+                <p id="connectionStatus"></p>
             </div>
 
+            <!-- ── Pause ── -->
             <div id="pauseScreen" class="overlay">
-                <h2>SYSTEM PAUSED</h2>
-                <p class="blink" style="margin-top: 15px; color: #00f0ff;">Host controls Pause/Resume</p>
+                <h2>PAUSED</h2>
+                <p>Host press [P] to resume</p>
             </div>
 
+            <!-- ── Game Over ── -->
             <div id="gameOverScreen" class="overlay">
-                <h2 id="gameOverTitle">MATCH OVER</h2>
+                <h2>MATCH OVER</h2>
                 <p id="winnerText" class="blink"></p>
-                <p>P1 Score: <span id="p1FinalScore">0</span></p>
-                <p>P2 Score: <span id="p2FinalScore">0</span></p>
-                <p style="margin-top: 15px; font-size: 0.8rem; color: #8b949e;">Host controls Restart [R]</p>
+                <div class="score-row">
+                    <div class="score-item">
+                        <div class="s-label" style="color:#00f0ff;">PLAYER 1</div>
+                        <div class="s-val" style="color:#00f0ff;"><span id="p1FinalScore">0</span></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="s-label" style="color:#ff00ff;">PLAYER 2</div>
+                        <div class="s-val" style="color:#ff00ff;"><span id="p2FinalScore">0</span></div>
+                    </div>
+                </div>
+                <p class="hint">Host: press [R] to rematch &nbsp;|&nbsp; ESC for menu</p>
             </div>
 
-            <canvas id="gameCanvas" width="900" height="600"></canvas>
-            
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+            <!-- ── HUD ── -->
             <div class="ui-panel">
-                <div class="stat-box" style="border-color: #00f0ff;">
-                    <h3 style="color: #00f0ff;">P1 (HOST)</h3>
+                <div class="stat-box p1-box">
+                    <h3>P1 (HOST)</h3>
                     <p id="p1ScoreDisplay">0</p>
+                    <p class="lives-display" id="p1LivesDisplay">♥♥♥</p>
+                    <div class="overcharge-bar-wrap">
+                        <div class="overcharge-bar p1-bar" id="p1OverchargeBar"></div>
+                    </div>
                 </div>
-                <div class="stat-box" style="border-color: #ff00ff;">
-                    <h3 style="color: #ff00ff;">P2 (JOIN)</h3>
+                <div class="stat-box p2-box">
+                    <h3>P2 (CLIENT)</h3>
                     <p id="p2ScoreDisplay">0</p>
+                    <p class="lives-display" id="p2LivesDisplay">♥♥♥</p>
+                    <div class="overcharge-bar-wrap">
+                        <div class="overcharge-bar p2-bar" id="p2OverchargeBar"></div>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <h3>ORBS LEFT</h3>
+                    <p id="orbsDisplay">—</p>
                 </div>
                 <div class="stat-box status">
-                    <h3>ORBS</h3>
-                    <p id="orbsDisplay" class="normal">0</p>
-                </div>
-                <div class="stat-box" style="margin-top: 15px;">
-                    <h3 style="color: #8b949e;">HOST CONTROLS</h3>
-                    <p style="font-size: 0.75rem; color: #fff; margin-top: 5px;">[P] Pause  |  [R] Restart</p>
+                    <h3>CONTROLS</h3>
+                    <p class="host-hint">
+                        WASD / ARROWS — move<br>
+                        [P] — pause (host)<br>
+                        [R] — rematch (host)
+                    </p>
                 </div>
             </div>
-            
+
+            <!-- Mobile d-pad -->
             <div id="mobileControls">
                 <div class="d-btn" id="btn-up">▲</div>
                 <div class="d-btn" id="btn-left">◀</div>
@@ -112,7 +325,14 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- ESC to go back to menu from game over -->
+    <script>
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') window.location.href = 'index.html';
+        });
+    </script>
+
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="multiplayer_game.js"></script>
 </body>

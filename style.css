@@ -10,13 +10,21 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: var(--bg-color);
     color: var(--text-main);
     font-family: 'Courier New', Courier, monospace; /* Gives a terminal/tech vibe */
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    background-image: 
+        linear-gradient(rgba(5, 10, 25, 0.4), rgba(5, 10, 25, 0.6)),
+        url("pixel-art-space-game-level-260nw-2544510599.jpg");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    filter: brightness(1.2) contrast(1.1);
 }
 
 .game-wrapper {
@@ -167,7 +175,15 @@ ul#menuList li.disabled {
 /* Update these sections in your existing style.css */
 
 .menu-body {
-    background-image: radial-gradient(circle at center, #161b22 0%, #0d1117 100%);
+    background-image: 
+        linear-gradient(rgba(5, 10, 25, 0.4), rgba(5, 10, 25, 0.6)),
+        url("pixel-art-space-game-level-260nw-2544510599.jpg");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    filter: brightness(1.2) contrast(1.1);
 }
 
 .menu-container {
